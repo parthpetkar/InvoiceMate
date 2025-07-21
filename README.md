@@ -20,9 +20,7 @@ This project aims to provide a comprehensive solution for generating invoices us
 
 ## Contributors
 - [Parth Petkar](https://github.com/parthpetkar)
-- [Contributor Name](https://github.com/contributor)
-- [Contributor Name](https://github.com/contributor)
-- [Contributor Name](https://github.com/contributor)
+- [Contributor Name]([https://github.com/contributor](https://github.com/parth1899))
 
 ## Company Logo
 ![Company Logo](../invoice_generator/Assets/company-logo.png)
