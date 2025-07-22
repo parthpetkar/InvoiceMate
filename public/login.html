@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="../Backend/login.js"></script>
     <link rel="stylesheet" href="../CSS/login.css" />
@@ -13,7 +14,8 @@
 <body>
     <section id="login" class="content-section">
         <div class="login-container">
-            <h1>Login</h1>
+            <img src="../Assets/company-logo.png" alt="Company Logo" style="width:60px; margin-bottom:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.12);" />
+            <h1 style="font-weight:600; letter-spacing:1px;">Login</h1>
             <form id="loginForm">
                 <div class="form-group">
                     <label for="username">Username</label>
@@ -25,6 +27,7 @@
                 </div>
                 <button class="button" type="button" id="loginButton">Login</button>
             </form>
+            <hr style="border:none; border-top:1px solid #444; margin:24px 0 12px;" />
             <div class="error" id="errorMessage">Invalid Credentials</div>
         </div>
     </section>
