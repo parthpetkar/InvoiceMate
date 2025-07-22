@@ -6,8 +6,8 @@ jobs:
   build_on_win:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 16
       - name: Install dependencies
@@ -17,7 +17,7 @@ jobs:
       - name: List files for debugging
         run: ls -R out/make/squirrel.windows/x64/
       - name: Archive Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: electron-build-win
           path: out/make/squirrel.windows/x64/invoice_gen-1.0.0 Setup.exe
@@ -26,8 +26,8 @@ jobs:
     needs: build_on_win
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           name: electron-build-win
           path: build/
