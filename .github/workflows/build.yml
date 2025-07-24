@@ -1,54 +1,130 @@
 name: Build and Release
 
-on: [push, pull_request]
+on: 
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
   build_on_win:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for version calculation
+          
       - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
+          
+      - name: Calculate Version
+        id: version
+        run: |
+          # Get the latest tag, default to v1.0.0 if none exists
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Remove 'v' prefix and split version
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          
+          # Increment based on trigger
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Increment major version for PR
+            major=$((major + 1))
+            minor=0
+            patch=0
+            echo "PR detected - incrementing major version"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # Increment minor version for push
+            minor=$((minor + 1))
+            patch=0
+            echo "Push detected - incrementing minor version"
+          fi
+          
+          NEW_VERSION="$major.$minor.$patch"
+          NEW_TAG="v$NEW_VERSION"
+          
+          echo "New version: $NEW_VERSION"
+          echo "New tag: $NEW_TAG"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$NEW_TAG" >> $GITHUB_OUTPUT
+        shell: bash
+        
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          
       - name: Install dependencies
         run: npm install
+        
       - name: Build
         run: npm run make
+        
       - name: List files for debugging
-        run: ls -R out/make/squirrel.windows/x64/
+        run: dir /s out\make\squirrel.windows\x64\
+        
+      - name: Find and rename executable
+        id: find_exe
+        run: |
+          # Find the setup executable (it might have the old version in the name)
+          $setupFile = Get-ChildItem -Path "out\make\squirrel.windows\x64\" -Name "*.exe" | Select-Object -First 1
+          $newName = "invoice_gen-${{ steps.version.outputs.version }}-Setup.exe"
+          
+          if ($setupFile) {
+            Rename-Item -Path "out\make\squirrel.windows\x64\$setupFile" -NewName $newName
+            echo "exe_name=$newName" >> $env:GITHUB_OUTPUT
+            echo "Found and renamed: $setupFile -> $newName"
+          } else {
+            echo "No setup executable found!"
+            exit 1
+          }
+        shell: powershell
+        
       - name: Archive Artifact
         uses: actions/upload-artifact@v4
         with:
           name: electron-build-win
-          path: out/make/squirrel.windows/x64/invoice_gen-1.0.0 Setup.exe
+          path: out/make/squirrel.windows/x64/${{ steps.find_exe.outputs.exe_name }}
 
   publish_release:
+    # Only run on push to main/master, not on PRs
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     needs: build_on_win
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/download-artifact@v4
         with:
           name: electron-build-win
           path: build/
+          
       - name: List files for debugging
-        run: ls -R build/
+        run: ls -la build/
+        
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v
-          release_name: Release v
+          tag_name: ${{ needs.build_on_win.outputs.tag_name }}
+          release_name: Release ${{ needs.build_on_win.outputs.tag_name }}
           draft: false
           prerelease: false
+          
       - name: Upload Release Asset (Windows)
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/invoice_gen-1.0.0 Setup.exe
-          asset_name: invoice_gen-1.0.0-setup-win.exe
+          asset_path: build/invoice_gen-${{ needs.build_on_win.outputs.version }}-Setup.exe
+          asset_name: invoice_gen-${{ needs.build_on_win.outputs.version }}-setup-win.exe
           asset_content_type: application/octet-stream
